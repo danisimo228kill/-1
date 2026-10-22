@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+html,body{width:100%;height:100%;margin:0;background:#101f2b;font:12px Arial,sans-serif}
+#message{position:absolute;z-index:1000;left:16px;top:16px;max-width:420px;padding:12px;background:#15232fee;color:#ffca72;border-radius:6px}
+.target{position:absolute;width:0;height:0;color:#59dbdf;cursor:pointer}
+.target.selected{color:#ffca72}.target.stale{color:#8fa1aa}
+.marker{position:absolute;left:-6px;top:-8px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:15px solid currentColor;transform-origin:6px 8px}
+.dot .marker{left:-5px;top:-5px;width:10px;height:10px;border:0;background:currentColor;border-radius:50%}
+.type-icon{display:none;width:28px;height:28px}
+.auto .marker{left:-14px;top:-14px;width:28px;height:28px;border:0;background:none;transform-origin:14px 14px}
+.auto.plane .plane-icon,.auto.drone .drone-icon,.auto.tower .tower-icon,.auto.ground .ground-icon,.auto.helicopter .helicopter-icon,.auto.unknown .unknown-icon{display:block}
+.selected:before{content:'';position:absolute;left:-14px;top:-14px;width:26px;height:26px;border:1px solid currentColor;border-radius:50%}
+.card{position:absolute;bottom:21px;left:0;transform:translateX(-50%);white-space:nowrap;background:#101f2bef;border:1px solid #466073;border-radius:4px;padding:3px 6px;line-height:16px;text-align:center;pointer-events:auto;cursor:pointer}
+.trail-dot{width:5px;height:5px;position:absolute;left:-2.5px;top:-2.5px;border-radius:50%;background:currentColor}
+.leader{position:absolute;height:1px;background:#8cabb966;transform-origin:0 0;pointer-events:none}
+.selected .card{border-color:#ffca72}.card strong{font-weight:600}.metrics{color:#edf5fa;font-size:11px}
+.antenna{position:absolute;left:-12px;top:-23px;color:#ffca72;font-size:27px;text-shadow:0 1px 3px #000}.antenna span{font-size:11px;position:absolute;top:29px;left:-13px}
+#scale{position:absolute;z-index:900;left:12px;bottom:36px;background:#101f2bee;color:#edf5fa;padding:10px;pointer-events:none}
+#scale-width{margin-top:6px}
+.manual-mark{color:var(--mark);position:absolute;left:-8px;top:-8px;width:14px;height:14px;border:2px solid currentColor;border-radius:50%;background:#101f2b}
+.manual-mark span{position:absolute;left:20px;top:-8px;white-space:nowrap;background:#101f2bee;padding:3px}
+.grid-label{color:#edf5fa;background:#101f2bcc;padding:2px 4px;white-space:nowrap;font:11px Arial}
+body[data-theme="day"] #scale{background:#edf2f6ee;color:#142b3c}
+#workspace{height:100%;display:flex;gap:6px}
+#preview-column{flex:0 0 calc((100% - 6px)*.30);min-width:160px;display:flex;flex-direction:column;gap:6px;padding-bottom:0;box-sizing:border-box}
+#main-map-frame{position:relative;flex:1;min-width:0;border:3px solid #00c9ed;padding:0;box-sizing:border-box}
+#map{width:100%;height:100%;background:#101f2b}
+.preview{position:relative;flex:1;min-height:100px;border:2px solid #16849d;border-radius:3px;overflow:hidden;background:#192936}
+.preview.active{border-color:#00c9ed}
+.preview-map{position:absolute;left:0;right:0;top:25px;bottom:0}
+.preview-head{height:25px;line-height:25px;padding-left:8px;color:#e3edf4;cursor:pointer}
+.preview-close{position:absolute;right:3px;top:2px;border:0;background:#253e50;color:#fff;cursor:pointer}
+.preview-empty{position:absolute;top:40%;left:8px;right:8px;text-align:center;color:#91a7b7;pointer-events:none;line-height:20px}
+.preview-coords{position:absolute;left:3px;bottom:20px;padding:2px 4px;background:#101f2bdd;color:#e3edf4;pointer-events:none;font-size:11px}
+.preview-cross{position:absolute;inset:25px 0 0;pointer-events:none;display:none}
+.preview-cross:before{content:'';position:absolute;left:50%;height:100%;border-left:1px solid #e67373}
+.preview-cross:after{content:'';position:absolute;top:50%;width:100%;border-top:1px solid #e67373}
+body.live-only #main-map-frame{display:none}
+body.live-only #preview-column{flex:1;flex-direction:row;gap:24px;padding-bottom:0}
+body.live-only .preview{min-width:0}
+body.classic #preview-column{display:none}
+body[data-theme="day"] .preview{background:#edf2f6}
+body[data-theme="day"] .preview-head,body[data-theme="day"] .preview-empty{color:#142b3c}
+body[data-theme="day"] .grid-label{background:#edf2f6cc;color:#174b60}
+</style></head><body><div id="workspace"><div id="preview-column"><div class="preview" id="preview-0"><div class="preview-head" onclick="bridge.activateRegion(0)">Участок 1 · 10 × 10 км</div><button class="preview-close" onclick="bridge.clearRegion(0);event.stopPropagation()">×</button><div class="preview-map" id="preview-map-0"></div><div class="preview-empty">ПКМ на основной карте<br>закрепляет участок</div><div class="preview-cross"></div><div class="preview-coords"></div></div><div class="preview" id="preview-1"><div class="preview-head" onclick="bridge.activateRegion(1)">Участок 2 · 10 × 10 км</div><button class="preview-close" onclick="bridge.clearRegion(1);event.stopPropagation()">×</button><div class="preview-map" id="preview-map-1"></div><div class="preview-empty">ПКМ на основной карте<br>закрепляет участок</div><div class="preview-cross"></div><div class="preview-coords"></div></div><div class="preview" id="preview-2"><div class="preview-head" onclick="bridge.activateRegion(2)">Участок 3 · 10 × 10 км</div><button class="preview-close" onclick="bridge.clearRegion(2);event.stopPropagation()">×</button><div class="preview-map" id="preview-map-2"></div><div class="preview-empty">ПКМ на основной карте<br>закрепляет участок</div><div class="preview-cross"></div><div class="preview-coords"></div></div></div><div id="main-map-frame"><div id="map"></div><div id="scale"><span id="radar-scale">Радиус: 70 км · кольца: 10 км</span><div id="scale-width"></div></div><div id="message">Подключение Яндекс Гибрида…</div></div></div>
+<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+<script>
+'use strict';
+let map, bridge, latest, antenna, sector, objects=new Map(), gridObjects=[], gridKey='';
+let cameraKey='', autoFit=true, cameraGeneration=0;
+function fitMainRadar(){
+ if(!map||!latest||!latest.main_bounds)return;
+ const generation=++cameraGeneration, center=latest.antenna.slice();
+ map.setBounds(latest.main_bounds,{checkZoomRange:false,zoomMargin:32,preciseZoom:true}).then(()=>{
+  if(generation===cameraGeneration&&autoFit)map.setCenter(center,map.getZoom(),{preciseZoom:true});
+ });
+}
+const markColors={green:'#36c96c',red:'#ff5656',blue:'#448dff'},markNames={green:'Свой',red:'Чужой',blue:'Неопознанный'};
+let radarBase=0,radarEpoch=0,radarRunning=false,radarRate=45,radarRadius=10000,lastFrame=0;
+window.radarFrames=0;window.radarAngle=0;
+function radarDestination(lat,lon,bearing,distance){
+ const rad=Math.PI/180,a=lat*rad,b=lon*rad,c=bearing*rad,d=distance/6371008.8;
+ const la=Math.asin(Math.sin(a)*Math.cos(d)+Math.cos(a)*Math.sin(d)*Math.cos(c));
+ const lo=b+Math.atan2(Math.sin(c)*Math.sin(d)*Math.cos(a),Math.cos(d)-Math.sin(a)*Math.sin(la));
+ return [la/rad,(lo/rad+540)%360-180];
+}
+function animateRadar(now){
+ requestAnimationFrame(animateRadar);
+ if(!map||!sector||!latest||!radarRunning||now-lastFrame<30)return;
+ lastFrame=now;
+ const az=(radarBase+(now-radarEpoch)*radarRate/1000)%360,points=[latest.antenna];
+ for(let d=-30;d<=30;d+=2)points.push(radarDestination(latest.antenna[0],latest.antenna[1],az+d,radarRadius));
+ points.push(latest.antenna);sector.geometry.setCoordinates([points]);
+ window.radarAngle=az;window.radarFrames++;
+}
+requestAnimationFrame(animateRadar);
+const message=document.getElementById('message');
+// Names are real click targets as well as marker symbols. Capture the DOM
+// event before the map handler, so one click cannot toggle selection twice.
+document.addEventListener('click',function(e){
+ // The SDK may place a transparent event layer above custom HTML. Hit-test
+ // the visible label rectangles as well as the DOM target in that case.
+ const card=(e.target.closest('#map')&&e.target.closest('.card'))||Array.from(document.querySelectorAll('#map .card')).find(function(c){
+  const r=c.getBoundingClientRect();return c.style.visibility!=='hidden'&&e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;
+ });
+ if(card&&bridge){e.preventDefault();e.stopImmediatePropagation();bridge.select(card.closest('.target').dataset.id);}
+},true);
+let arranging=false;
+function scheduleLabels(){if(!arranging){arranging=true;requestAnimationFrame(function(){requestAnimationFrame(function(){arranging=false;arrangeLabels();});});}}
+function arrangeLabels(){
+ const bounds=document.getElementById('map').getBoundingClientRect(),occupied=[];
+ const nodes=Array.from(document.querySelectorAll('#map .target')).sort((a,b)=>Number(b.classList.contains('selected'))-Number(a.classList.contains('selected')));
+ nodes.forEach(function(node){const r=node.getBoundingClientRect();occupied.push({x:r.x-13,y:r.y-13,w:26,h:26});});
+ nodes.forEach(function(node){
+  const card=node.querySelector('.card'),origin=node.getBoundingClientRect(),w=card.offsetWidth,h=card.offsetHeight;
+  if(origin.x<bounds.x||origin.x>bounds.right||origin.y<bounds.y||origin.y>bounds.bottom){card.style.visibility='hidden';return;}
+  card.style.visibility='visible';
+  const candidates=[[-w/2,-h-18],[18,-h/2],[-w-18,-h/2],[-w/2,18],[-w/2,-h-60],[18,-h-52]];
+  let best=null,score=Infinity;
+  candidates.forEach(function(p){
+   const x=Math.max(bounds.x+5,Math.min(bounds.right-w-5,origin.x+p[0]));
+   const y=Math.max(bounds.y+8,Math.min(bounds.bottom-h-35,origin.y+p[1]));
+   const cost=occupied.reduce((n,r)=>n+Math.max(0,Math.min(x+w,r.x+r.w)-Math.max(x,r.x))*Math.max(0,Math.min(y+h,r.y+r.h)-Math.max(y,r.y)),0);
+   if(cost<score){score=cost;best={x:x,y:y,w:w,h:h};}
+  });
+  occupied.push({x:best.x-4,y:best.y-4,w:w+8,h:h+8});
+  card.style.transform='none';card.style.bottom='auto';card.style.left=(best.x-origin.x)+'px';card.style.top=(best.y-origin.y)+'px';
+  const line=node.querySelector('.leader'),dx=best.x+w/2-origin.x,dy=best.y+h/2-origin.y;
+  line.style.width=Math.hypot(dx,dy)+'px';line.style.transform='rotate('+Math.atan2(dy,dx)+'rad)';
+ });
+}
+function fail(){message.textContent='Не удалось загрузить Яндекс Спутник. Проверьте интернет и настройки JavaScript API ключа.';message.style.display='block';if(bridge)bridge.error('Яндекс Спутник не загрузился: проверьте интернет и настройки ключа.');}
+const deadline=setTimeout(fail,30000);
+new QWebChannel(qt.webChannelTransport,function(channel){
+ bridge=channel.objects.bridge;
+ const script=document.createElement('script');
+ script.src='https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey='+encodeURIComponent(__API_KEY_JSON__);
+ script.onerror=fail;script.onload=function(){if(!window.ymaps){fail();return;}ymaps.ready(init,fail);};
+ document.head.appendChild(script);
+});
+function init(){
+ try {
+ map=new ymaps.Map('map',{center:[60.022612,30.293248],zoom:11,type:'yandex#hybrid',controls:['zoomControl'],behaviors:['drag','scrollZoom','dblClickZoom','multiTouch']},{suppressMapOpenBlock:true,avoidFractionalZoom:false});
+ map.events.add('error',fail);
+ map.events.add('contextmenu',function(e){e.preventDefault();const c=e.get('coords');bridge.pinRegion(c[0],c[1]);});
+ map.events.add(['boundschange','sizechange'],updateScale);
+ updateScale();
+ const layout=ymaps.templateLayoutFactory.createClass('<div style="color:{{properties.color}}" data-id="{{properties.id}}" class="target {{properties.shape}} {{properties.icon}} {% if properties.selected %}selected{% endif %} {% if properties.stale %}stale{% endif %}"><div class="leader"></div><div class="marker" style="transform:rotate({{properties.course}}deg)">__ICONS_MARKUP__</div><div class="card"><strong>{{properties.name}}{% if properties.markName %} · {{properties.markName}}{% endif %}</strong>{% if properties.metrics %}<div class="metrics">{{properties.metrics}}</div>{% endif %}</div></div>',{build:function(){layout.superclass.build.call(this);scheduleLabels();}});
+ window.targetLayout=layout;
+ window.dotLayout=ymaps.templateLayoutFactory.createClass('<div class="trail-dot" style="color:{{properties.color}}"></div>');
+ map.events.add(['boundschange','sizechange','actiontick'],scheduleLabels);
+ antenna=new ymaps.Placemark([60.022612,30.293248],{}, {iconLayout:ymaps.templateLayoutFactory.createClass('<div class="antenna">⚑<span>АНТЕННА</span></div>'),zIndex:500});map.geoObjects.add(antenna);
+ sector=new ymaps.Polygon([],{}, {fillColor:'#59dbdf',fillOpacity:0.10,strokeColor:'#59dbdf',strokeOpacity:0.4,strokeWidth:1,interactivityModel:'default#transparent'});map.geoObjects.add(sector);
+ for(const event of ['wheel','pointerdown','touchstart'])document.getElementById('map').addEventListener(event,()=>{autoFit=false;cameraGeneration++;},{passive:true});
+ clearTimeout(deadline);message.style.display='none';bridge.ready();
+ }catch(e){fail();}
+}
+window.renderSnapshot=function(data){
+ latest=data;if(!map)return;
+ const camera=JSON.stringify([data.antenna,data.radius_m]);
+ if(camera!==cameraKey){cameraKey=camera;autoFit=true;fitMainRadar();}
+ document.body.dataset.theme=data.theme;
+ map.options.set('cursors',['default']);
+ // Apply brightness to satellite tiles only; keep text and map overlays legible.
+ const tilePane=map.panes.get('ground').getElement();
+ tilePane.style.filter=data.theme==='night'?'brightness(0.45) saturate(0.7)':data.theme==='dusk'?'brightness(0.72) saturate(0.85)':'none';
+ updateGrid(data);
+ updateRegions(data);
+ radarBase=data.azimuth;radarEpoch=performance.now();radarRunning=data.rotating;radarRate=data.rotation_rate;radarRadius=data.radius_m;
+ window.radarAngle=radarBase;
+ antenna.geometry.setCoordinates(data.antenna);sector.geometry.setCoordinates([data.sector]);
+ map.geoObjects.each(function(o){if(o.geometry&&o.geometry.getType()==='Circle')o.geometry.setCoordinates(data.antenna);});
+ const present=new Set();
+ data.targets.forEach(function(t){
+  present.add(t.id);let o=objects.get(t.id);
+  const color=markColors[t.manual_color]||(t.stale?'#8fa1aa':t.selected?'#ffca72':'#59dbdf');
+  if(!o){
+   const marker=new ymaps.Placemark(t.position,{}, {iconLayout:window.targetLayout,iconShape:{type:'Circle',coordinates:[0,0],radius:18},hideIconOnBalloonOpen:false});
+   const path=new ymaps.Polyline([],{}, {strokeWidth:2,interactivityModel:'default#transparent'});
+   marker.events.add('click',function(e){if(e&&e.stopPropagation)e.stopPropagation();bridge.select(t.id);});
+   map.geoObjects.add(path);map.geoObjects.add(marker);o={marker:marker,path:path,dots:[]};objects.set(t.id,o);
+  }
+  o.marker.geometry.setCoordinates(t.position);
+  o.marker.properties.set({id:t.id,name:t.name||t.id,color:color,markName:markNames[t.manual_color]||'',course:t.shape==='auto'&&t.icon==='tower'?0:t.course,shape:t.shape,icon:t.icon,selected:t.selected,stale:t.stale,metrics:t.metrics.join(' · ')});
+  o.marker.options.set('zIndex',t.selected?1000:600);
+  o.path.geometry.setCoordinates(t.tail);o.path.options.set('strokeColor',color);
+  const points=t.short?t.tail.slice(0,-1):[];
+  while(o.dots.length>points.length){map.geoObjects.remove(o.dots.pop());}
+  while(o.dots.length<points.length){const dot=new ymaps.Placemark(t.position,{}, {iconLayout:window.dotLayout,interactivityModel:'default#transparent',zIndex:400});o.dots.push(dot);map.geoObjects.add(dot);}
+  points.forEach(function(p,i){o.dots[i].geometry.setCoordinates(p);o.dots[i].properties.set('color',color);});
+ });
+ objects.forEach(function(o,id){if(!present.has(id)){map.geoObjects.remove(o.marker);map.geoObjects.remove(o.path);o.dots.forEach(d=>map.geoObjects.remove(d));objects.delete(id);}});
+ scheduleLabels();
+};
+function updateScale(){
+ if(!map)return;
+ const mpp=2*Math.PI*6378137*Math.cos(map.getCenter()[0]*Math.PI/180)/(256*Math.pow(2,map.getZoom()));
+ const widthM=document.getElementById('map').clientWidth*mpp;
+ const distance=widthM>=1000?(widthM/1000).toFixed(1)+' км':widthM.toFixed(0)+' м';
+ document.getElementById('scale-width').textContent='Масштаб: ≈ '+distance+' по ширине';
+}
+function updateGrid(data){
+ const key=JSON.stringify([data.antenna,data.radius_m,data.ring_step_m]);if(key===gridKey)return;gridKey=key;
+ gridObjects.forEach(o=>map.geoObjects.remove(o));gridObjects=[];
+ const labelLayout=ymaps.templateLayoutFactory.createClass('<span class="grid-label">{{properties.text}}</span>');
+ function add(o){gridObjects.push(o);map.geoObjects.add(o);}
+ for(let a=0;a<360;a+=30){
+  add(new ymaps.Polyline([data.antenna,radarDestination(...data.antenna,a,data.radius_m)],{}, {strokeColor:'#59dbdf',strokeOpacity:.55,strokeWidth:1,strokeStyle:'dash',interactivityModel:'default#transparent'}));
+  add(new ymaps.Placemark(radarDestination(...data.antenna,a,data.radius_m*.92),{text:String(a).padStart(3,'0')+'°'},{iconLayout:labelLayout,interactivityModel:'default#transparent'}));
+ }
+ for(let radius=data.ring_step_m;radius<=data.radius_m;radius+=data.ring_step_m){
+  add(new ymaps.Circle([data.antenna,radius],{}, {fillOpacity:0,strokeColor:'#59dbdf',strokeOpacity:.35,strokeWidth:1,strokeStyle:'dash',interactivityModel:'default#transparent'}));
+  add(new ymaps.Placemark(radarDestination(...data.antenna,45,radius),{text:radius/1000+' км'},{iconLayout:labelLayout,interactivityModel:'default#transparent'}));
+ }
+ document.getElementById('radar-scale').textContent='Радиус: '+data.radius_m/1000+' км · кольца: '+data.ring_step_m/1000+' км';
+}
+const regionViews=[null,null,null],regionRects=[null,null,null];
+let lastLiveOnly=false;
+function updateRegions(data){
+ document.body.classList.toggle('classic',data.show_previews===false);
+ const liveOnly=!!data.live_only;
+ if(liveOnly!==lastLiveOnly){
+  document.body.classList.toggle('live-only',liveOnly);lastLiveOnly=liveOnly;
+  requestAnimationFrame(()=>{map.container.fitToViewport();regionViews.forEach(v=>{if(v){v.map.container.fitToViewport();v.key='';}});});
+ }
+ (data.pinned_regions||[null,null,null]).forEach((region,i)=>{
+  const frame=document.getElementById('preview-'+i);
+  frame.classList.toggle('active',i===data.active_region);
+  frame.querySelector('.preview-empty').style.display=region?'none':'block';
+  frame.querySelector('.preview-close').style.display=region?'block':'none';
+  frame.querySelector('.preview-cross').style.display=region?'block':'none';
+  const text=frame.querySelector('.preview-coords');
+  text.textContent=region?region.lat.toFixed(5)+'°, '+region.lon.toFixed(5)+'°':'';
+  if(!region){
+   if(regionViews[i]){regionViews[i].map.destroy();regionViews[i]=null;}
+   if(regionRects[i]){map.geoObjects.remove(regionRects[i]);regionRects[i]=null;}
+   return;
+  }
+  let view=regionViews[i];
+  if(!view){
+   const mini=new ymaps.Map('preview-map-'+i,{center:[region.lat,region.lon],zoom:12,type:'yandex#hybrid',controls:[],behaviors:[]},{suppressMapOpenBlock:true,avoidFractionalZoom:false});
+   mini.events.add('click',()=>bridge.activateRegion(i));
+   const box=new ymaps.Rectangle(region.bounds,{}, {fillOpacity:0,strokeColor:'#00c9ed',strokeStyle:'dash',strokeWidth:1,interactivityModel:'default#transparent'});
+   mini.geoObjects.add(box);
+   view={map:mini,box:box,key:'',objects:new Map()};regionViews[i]=view;
+   mini.events.add('sizechange',()=>{view.key='';if(latest)requestAnimationFrame(()=>updateRegions(latest));});
+  }
+  const key=JSON.stringify(region.bounds)+':'+frame.clientWidth+':'+frame.clientHeight;
+  if(key!==view.key){
+   view.key=key;view.map.container.fitToViewport();
+   view.map.setBounds(region.bounds,{checkZoomRange:false,zoomMargin:16,preciseZoom:true}).then(()=>{if(regionViews[i]===view&&latest.pinned_regions[i]&&latest.pinned_regions[i].lat===region.lat&&latest.pinned_regions[i].lon===region.lon)view.map.setCenter([region.lat,region.lon],view.map.getZoom(),{preciseZoom:true});});
+   view.box.geometry.setCoordinates(region.bounds);
+   if(!regionRects[i]){
+    regionRects[i]=new ymaps.Rectangle(region.bounds,{},{fillOpacity:0,strokeColor:'#00c9ed',strokeStyle:'dash',strokeWidth:1,interactivityModel:'default#transparent'});
+    map.geoObjects.add(regionRects[i]);
+   }else regionRects[i].geometry.setCoordinates(region.bounds);
+  }
+  view.map.panes.get('ground').getElement().style.filter=data.theme==='night'?'brightness(0.45) saturate(0.7)':data.theme==='dusk'?'brightness(0.72) saturate(0.85)':'none';
+  const present=new Set();
+  data.targets.forEach(t=>{
+   present.add(t.id);let object=view.objects.get(t.id);
+   const color=markColors[t.manual_color]||(t.selected?'#ffca72':'#59dbdf');
+   if(!object){
+    const marker=new ymaps.Placemark(t.position,{}, {iconLayout:window.targetLayout,interactivityModel:'default#transparent'});
+    const path=new ymaps.Polyline([],{}, {strokeWidth:1,interactivityModel:'default#transparent'});
+    view.map.geoObjects.add(path);view.map.geoObjects.add(marker);object={marker:marker,path:path};view.objects.set(t.id,object);
+   }
+   object.marker.geometry.setCoordinates(t.position);
+   object.marker.properties.set({id:t.id,name:t.name||t.id,color:color,shape:t.shape,icon:t.icon,course:t.course,selected:false,stale:false,metrics:'',markName:''});
+   object.path.geometry.setCoordinates(t.tail);object.path.options.set('strokeColor',color);
+  });
+  view.objects.forEach((o,id)=>{if(!present.has(id)){view.map.geoObjects.remove(o.marker);view.map.geoObjects.remove(o.path);view.objects.delete(id);}});
+
+ });
+}
+window.addEventListener('resize',()=>{if(map&&latest)requestAnimationFrame(()=>{map.container.fitToViewport();if(autoFit)fitMainRadar();regionViews.forEach(v=>{if(v){v.map.container.fitToViewport();v.key='';}});updateRegions(latest);});});
+window.focusAntenna=function(){autoFit=true;fitMainRadar();};
+window.zoomBy=function(d){if(map){autoFit=false;cameraGeneration++;map.setZoom(Math.max(2,Math.min(19,map.getZoom()+d)),{preciseZoom:true});}};
+</script></body></html>

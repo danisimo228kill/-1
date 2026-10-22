@@ -1,0 +1,25 @@
+Map data © OpenStreetMap contributors, available under ODbL 1.0.
+https://www.openstreetmap.org/copyright
+https://opendatacommons.org/licenses/odbl/1-0/
+
+Source extract: BBBike, SanktPetersburg, Shortbread vector MBTiles.
+https://download.bbbike.org/osm/bbbike/SanktPetersburg/
+Provider archive: SanktPetersburg.osm.mbtiles-shortbread.zip
+The downloaded package README states creation on 2026-10-04 07:26:53 UTC.
+This is the package creation time, not the survey date of every object.
+Source data archive is retained in spb-shortbread.zip beside this notice.
+Source vector MBTiles MD5: f68fd1629f06c1a23d7facfa62e692b7
+
+Local output: spb-north-osm.mbtiles, raster PNG tiles, zoom levels 10–16.
+Own dark cartographic style; no tiles fetched from tile.openstreetmap.org.
+Approximate area: 20 x 20 km, north and central Saint Petersburg.
+Bounds west,south,east,north: 30.11325,59.889,30.47325,60.069.
+The antenna at 60.022612,30.293248 is inside the region, north of its centre.
+The output covers a limited district, not all Saint Petersburg.
+Outside this rectangle no map is displayed. OSM data is not a live feed.
+
+Rebuild in the host Python environment:
+  pip install -r requirements-map-build.txt
+  python shortbread_source.py
+  python build_osm_tiles.py
+The installed Astra application reads the finished raster archive locally.
